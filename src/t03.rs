@@ -15,7 +15,7 @@ fn read_input_file() -> Vec<String> {
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 struct Battery {
     idx:    usize,
-    value:  u32,
+    value:  u64,
 }
 
 impl Battery {
@@ -25,7 +25,7 @@ impl Battery {
             .map(|(i, battery)| {
                 Self {
                     idx: i,
-                    value: battery.to_digit(10).unwrap()
+                    value: battery.to_digit(10).unwrap() as u64
                 }
             })
             .collect()
@@ -56,14 +56,41 @@ pub fn p1() {
 
             left_batt.value*10 + right_batt.value
         })
-        .sum::<u32>();
+        .sum::<u64>();
 
     println!("t03p1: {}", answer);
 }
 
 pub fn p2() {
     let data = read_input_file();
-    let mut answer = 0;
+
+    let answer = data.iter()
+        .map(|bank| {
+            let batteries = Battery::from_bank(bank);
+            let mut valid_batts: Vec<Battery> = vec![];
+
+            const BATTS_NEEDED: usize = 12;
+            for i in 1..=BATTS_NEEDED {
+                let start_idx = if valid_batts.is_empty() { 0 } else { valid_batts.last().unwrap().idx + 1 };
+                let end_buffer = BATTS_NEEDED - i;
+                let batt = batteries[start_idx..batteries.len()-end_buffer]
+                    .iter()
+                    .reduce(|current_highest, batt| {
+                        if batt.value > current_highest.value { batt }
+                        else { current_highest }
+                    })
+                    .unwrap();
+
+                valid_batts.push(batt.clone());
+            }
+
+            valid_batts
+                .iter()
+                .fold(0, |acc, b| {
+                    acc*10 + b.value
+                })
+        })
+        .sum::<u64>();
 
     println!("t03p2: {}", answer);
 }
