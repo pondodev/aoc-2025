@@ -4,6 +4,7 @@ mod t03;
 mod t04;
 mod t05;
 mod t06;
+mod t07;
 
 fn main() {
     t01::p1();
@@ -23,5 +24,8 @@ fn main() {
     println!("---");
     t06::p1();
     t06::p2();
+    println!("---");
+    t07::p1();
+    t07::p2();
     println!("---");
 }
