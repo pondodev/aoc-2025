@@ -1,4 +1,5 @@
 use std::fs::read_to_string;
+use std::cmp::{Ordering, max};
 
 const FILENAME: &str    = "inputs/t05.txt";
 
@@ -47,6 +48,37 @@ impl Ingredients {
             }
         }
 
+        // sort ranges so they're easier to merge in the next step
+        id_ranges.sort_by(|a, b| {
+            if a.0 < b.0 { Ordering::Less }
+            else if a.0 > b.0 { Ordering::Greater }
+            else {
+                if a.1 < b.1 { Ordering::Less }
+                else if a.1 > b.1 { Ordering::Greater }
+                else { Ordering::Equal }
+            }
+        });
+
+        // merge overlapping ranges
+        let id_ranges = id_ranges.into_iter()
+            .fold(vec![], |mut merged_ranges, range| {
+                if merged_ranges.is_empty() {
+                    merged_ranges.push(range)
+                } else {
+                    let last_range = merged_ranges.last_mut().unwrap();
+                    // if the next range overlaps with the last range...
+                    if range.0 <= last_range.1 {
+                        // ...extend the last range to encapsulate the next range...
+                        last_range.1 = max(range.1, last_range.1);
+                    } else {
+                        // ...else push the next range to the vec
+                        merged_ranges.push(range);
+                    }
+                }
+
+                merged_ranges
+            });
+
         Self { id_ranges, ids }
     }
 }
@@ -74,7 +106,9 @@ pub fn p1() {
 pub fn p2() {
     let data = read_input_file();
 
-    let answer = 0;
+    let ingredients = Ingredients::new(data);
+    let answer = ingredients.id_ranges.into_iter()
+        .fold(0, |acc, range| acc + range.1-range.0+1);
 
     println!("t05p2: {}", answer);
 }
