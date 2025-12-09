@@ -1,4 +1,6 @@
 use std::fs::read_to_string;
+use std::rc::Rc;
+use std::cell::RefCell;
 
 const FILENAME: &str    = "inputs/t07.txt";
 
@@ -98,10 +100,78 @@ pub fn p1() {
     println!("t07p1: {}", answer);
 }
 
+struct GraphNode {
+    pos:        (usize, usize),
+    children:   Vec<Rc<RefCell<GraphNode>>>,
+}
+
+impl GraphNode {
+    fn new(pos: (usize, usize)) -> Rc<RefCell<Self>> {
+        Rc::new(RefCell::new(Self { pos, children: vec![] }))
+    }
+}
+
+struct Laser {
+    pos:    (usize, usize),
+    origin: Rc<RefCell<GraphNode>>,
+}
+
+impl Laser {
+    fn new(pos: (usize, usize), origin: Rc<RefCell<GraphNode>>) -> Self {
+        Self { pos, origin }
+    }
+}
+
 pub fn p2() {
     let data = read_input_file();
+    let diagram = Diagram::new(data);
 
     let answer = 0;
+    let start = diagram.get_start_coord();
+    let root = GraphNode::new(start.clone());
+
+    let mut lasers = vec![Laser::new(start, Rc::clone(&root))];
+    for y in 0..diagram.height {
+        println!("now at y: {}", y);
+        println!("laser count: {}", lasers.len());
+        // adjust the y pos of every laser
+        lasers = lasers.iter()
+            .map(|l| Laser::new((l.pos.0, y), Rc::clone(&l.origin)))
+            .collect();
+
+        // check if any lasers are on a splitter. if so, split it and update
+        // the tree
+        let mut new_lasers = vec![];
+        for l in lasers {
+            if ! diagram.check_splitter(l.pos.0, l.pos.1) {
+                new_lasers.push(l);
+                continue
+            }
+
+            // we're on a splitter, so now we need to:
+            // 1. create a new node
+            // 2. add the node as a child of the source node the laser came from
+            // 3. create two new lasers with with the new node as the origin
+            let new_node = GraphNode::new(l.pos);
+            l.origin.borrow_mut().children.push(Rc::clone(&new_node));
+
+            let left_laser = if l.pos.0 != 0 {
+                Some(Laser::new((l.pos.0-1, l.pos.1), Rc::clone(&new_node)))
+            } else {
+                None
+            };
+            let right_laser = if l.pos.0 != diagram.width-1 {
+                Some(Laser::new((l.pos.0+1, l.pos.1), Rc::clone(&new_node)))
+            } else {
+                None
+            };
+
+            if let Some(left) = left_laser { new_lasers.push(left) }
+            if let Some(right) = right_laser { new_lasers.push(right) }
+        }
+
+        lasers = new_lasers
+    }
 
     println!("t07p2: {}", answer);
 }
